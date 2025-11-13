@@ -118,9 +118,7 @@ You can modify the following parameters in `real_time_detect.py`:
 - **Speed**: Real-time on most modern CPUs
 - **Accuracy**: mAP of 37.3% on COCO dataset
 
-## License
 
-This project is open source and available under the MIT License.
 
 ## Acknowledgments
 
