@@ -186,6 +186,3 @@ npm test
 - Run from this directory so `yolov8n.pt` is found, or provide another model
   path to the Python API.
 
-## License
-
-MIT. See [LICENSE](LICENSE).
