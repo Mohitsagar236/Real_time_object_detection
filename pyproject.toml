@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "realtime-object-detection"
+version = "1.0.0"
+description = "Modular real-time YOLOv8 object detection and tracking"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Real-Time Object Detection contributors" }]
+dependencies = [
+    "fastapi>=0.115,<1",
+    "lap>=0.5.12,<1",
+    "numpy>=1.24",
+    "opencv-python>=4.8,<5",
+    "ultralytics>=8.2,<9",
+    "uvicorn[standard]>=0.30,<1",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+
+[project.scripts]
+object-detect = "object_detection.cli:main"
+object-detect-web = "object_detection.web.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["object_detection*"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.pyright]
+pythonVersion = "3.9"
+typeCheckingMode = "basic"

@@ -1,135 +1,191 @@
-# Real-Time Object Detection with YOLOv8
+# VisionDesk Real-Time Object Detection
 
-A real-time object detection system using YOLOv8 and OpenCV for webcam-based detection.
+VisionDesk is a modular YOLOv8 application with a complete browser workspace
+and a CLI for detecting and tracking objects from cameras, videos, images, and
+network streams. The browser sends camera frames to a local WebSocket inference
+service and draws the returned detections over the live preview.
 
 ## Features
 
-- **Real-time Detection**: Detects objects in real-time using your webcam
-- **YOLOv8 Model**: Uses the lightweight YOLOv8n (nano) model for fast inference
-- **80 Object Classes**: Detects people, vehicles, animals, and common objects from the COCO dataset
-- **Live Visualization**: Displays bounding boxes, labels, and confidence scores
-- **FPS Display**: Shows current frames per second in the video feed
+- Responsive live-camera workspace
+- Browser-to-YOLO WebSocket streaming with frame backpressure
+- Bounding boxes, labels, confidence, and persistent tracking IDs
+- Live class counts, latency, inference time, and measured FPS
+- Camera switching, mirrored preview, fullscreen, and snapshots
+- Confidence, IoU, target-rate, tracking, and class-preset controls
+- Image, video, webcam, and stream URL support from the CLI
+- Headless processing and annotated image/video export
+- Lazy dependency loading and resource-safe cleanup
+- Automated backend, frontend, API, and rendered-output tests
+
+The bundled `yolov8n.pt` model recognizes the 80 COCO classes.
 
 ## Requirements
 
-- Python 3.8 or higher
-- Webcam/Camera
+- Python 3.9 or newer; Python 3.10 or 3.11 is recommended
+- Node.js 22.13 or newer
+- A webcam when using the live-camera workspace
 
-## Installation
+## Install
 
-1. Clone the repository:
-```bash
-git clone https://github.com/Mohitsagar236/Real_time_object_detection.git
-cd Real_time_object_detection
-```
+From this directory:
 
-2. Create a virtual environment (recommended):
-```bash
+```powershell
 python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e .
+cd frontend
+npm ci
+cd ..
 ```
 
-3. Activate the virtual environment:
-- Windows:
-  ```bash
-  .venv\Scripts\activate
-  ```
-- Linux/Mac:
-  ```bash
-  source .venv/bin/activate
-  ```
+On macOS or Linux, activate with `source .venv/bin/activate`.
 
-4. Install required packages:
-```bash
-pip install ultralytics opencv-python numpy
+## Run VisionDesk
+
+On Windows, start the API and frontend together:
+
+```powershell
+.\start_visiondesk.ps1
 ```
 
-## Usage
+The browser opens at `http://127.0.0.1:3000`. Select **Start camera**, allow
+camera permission, frame the scene, and select **Start detection**.
 
-Run the object detection script:
-```bash
+Stop both services with:
+
+```powershell
+.\stop_visiondesk.ps1
+```
+
+To run the services separately:
+
+```powershell
+object-detect-web
+cd frontend
+npm run dev:local
+```
+
+The detection API listens on `127.0.0.1:8765` by default. Set
+`DETECTION_PORT` and `NEXT_PUBLIC_DETECTION_WS_URL` together to use another
+port.
+
+## Run the CLI
+
+Start the original camera workflow:
+
+```powershell
+object-detect
+```
+
+The compatibility entry points are also supported:
+
+```powershell
 python real_time_detect.py
+python -m object_detection
 ```
 
-### Controls
+Press **Q** or **Escape** in the OpenCV preview to stop.
 
-- **Press 'q'**: Quit the application
+### CLI examples
 
-## Project Structure
+Process a video and save the annotated result:
 
-```
-Real_time_object_detection/
-├── real_time_detect.py    # Main detection script
-├── yolov8n.pt            # YOLOv8 nano model weights
-├── datasets/             # Training datasets
-│   └── coco128/         # COCO dataset subset
-├── ByteTrack/           # Object tracking utilities
-├── deep_sort/           # Deep SORT tracking algorithm
-├── ultralytics/         # Ultralytics library
-└── yolo_tracking/       # YOLO tracking implementations
+```powershell
+object-detect --source input.mp4 --output output.mp4
 ```
 
-## How It Works
+Process an image without a preview:
 
-1. **Model Loading**: The script loads the pre-trained YOLOv8n model (`yolov8n.pt`)
-2. **Camera Access**: Opens the default webcam (camera index 0)
-3. **Frame Processing**: Each frame is processed through the YOLO model
-4. **Detection**: Objects are detected with confidence threshold of 0.5
-5. **Visualization**: Results are drawn on the frame with bounding boxes and labels
-6. **Display**: The annotated frame is shown in a window
+```powershell
+object-detect --source photo.jpg --output detected.jpg --no-display
+```
 
-## Detected Object Classes
+Track people and vehicles from camera 1:
 
-The model can detect 80 different object classes including:
-- **People**: person
-- **Vehicles**: car, truck, bus, motorcycle, bicycle, train, airplane, boat
-- **Animals**: cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe
-- **Objects**: backpack, umbrella, handbag, tie, suitcase, bottle, cup, fork, knife, spoon, bowl
-- **Electronics**: laptop, mouse, keyboard, cell phone, TV, remote
-- **Furniture**: chair, couch, bed, dining table
-- And many more...
+```powershell
+object-detect --source 1 --track --classes 0,2,3,5,7
+```
 
-## Configuration
+Run headlessly on a network stream:
 
-You can modify the following parameters in `real_time_detect.py`:
+```powershell
+object-detect --source "rtsp://example/stream" --no-display --output result.mp4
+```
 
-- **Confidence Threshold**: Change `conf=0.5` to adjust detection sensitivity (0.0-1.0)
-- **Camera Index**: Change `cv2.VideoCapture(0)` to use a different camera
-- **Model**: Replace `yolov8n.pt` with other YOLO models (yolov8s.pt, yolov8m.pt, yolov8l.pt, yolov8x.pt)
+See every CLI option:
+
+```powershell
+object-detect --help
+```
+
+## Architecture
+
+```text
+object_detection/
+|-- application.py      # resource-safe desktop/CLI pipeline
+|-- domain.py           # backend-independent detection records
+|-- io.py               # camera, image, video, and output adapters
+|-- model.py            # lazy Ultralytics YOLO adapter
+|-- rendering.py        # OpenCV visualization
+`-- web/
+    |-- api.py           # FastAPI routes and WebSocket lifecycle
+    |-- protocol.py      # validated public wire format
+    `-- runtime.py       # concurrency-safe inference service
+
+frontend/
+|-- app/                 # VisionDesk application shell and visual system
+|-- components/          # camera, controls, metrics, and object inspector
+|-- hooks/               # camera and detection socket lifecycles
+|-- lib/                 # shared detection configuration
+`-- types/               # frontend API contracts
+```
+
+The frontend, transport, inference, rendering, and input/output layers depend
+on explicit shared contracts. Tests replace model, camera, and socket
+dependencies with small fakes.
+
+## Test
+
+Run the Python suite:
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+Run the production frontend build and rendered-output tests:
+
+```powershell
+cd frontend
+npm test
+```
 
 ## Troubleshooting
 
-**Camera not opening:**
-- Ensure your webcam is connected and not in use by another application
-- Try changing the camera index: `cv2.VideoCapture(1)` or `cv2.VideoCapture(2)`
+**The browser cannot use the camera**
 
-**Low FPS:**
-- Use a lighter model (yolov8n.pt is the fastest)
-- Reduce frame resolution
-- Ensure GPU support is available (install `torch` with CUDA)
+- Allow camera access in the browser permission prompt.
+- Close other applications using the camera.
+- Choose another camera from the inspector when one is available.
 
-**Module not found errors:**
-- Ensure all packages are installed: `pip install ultralytics opencv-python numpy`
-- Activate your virtual environment before running
+**The model shows as offline**
 
-## Performance
+- Confirm `object-detect-web` is running on port `8765`.
+- Run `.\start_visiondesk.ps1` to start both services together.
 
-- **Model**: YOLOv8n (nano)
-- **Parameters**: ~3.2M
-- **Speed**: Real-time on most modern CPUs
-- **Accuracy**: mAP of 37.3% on COCO dataset
+**Inference is slow**
 
+- Keep the included nano model.
+- Lower the target rate or camera resolution.
+- Use a CUDA-enabled PyTorch installation when a supported GPU is available.
 
+**A model or module cannot be loaded**
 
-## Acknowledgments
+- Activate the intended environment and run `python -m pip install -e .`.
+- Run from this directory so `yolov8n.pt` is found, or provide another model
+  path to the Python API.
 
-- [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics)
-- [COCO Dataset](https://cocodataset.org/)
-- [OpenCV](https://opencv.org/)
+## License
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Contact
-
-For questions or support, please open an issue in the repository.
+MIT. See [LICENSE](LICENSE).
